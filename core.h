@@ -33,14 +33,7 @@ extern const struct ieee80211_ops rtw89_ops;
 #define IEEE80211_TRIGGER_ULBW_40MHZ		0x1
 #define IEEE80211_TRIGGER_ULBW_80MHZ		0x2
 #define IEEE80211_TRIGGER_ULBW_160_80P80MHZ	0x3
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_20MHZ 0
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_40MHZ 1
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_80MHZ 2
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_160MHZ 3
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_320MHZ_1 4
-#define IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_320MHZ_2 5
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
+
 /* sparse defines __CHECKER__; see Documentation/dev-tools/sparse.rst */
 #ifdef __CHECKER__
 /*
@@ -53,6 +46,7 @@ extern const struct ieee80211_ops rtw89_ops;
 #else
 # define __iftd
 #endif /* __CHECKER__ */
+
 /**
  * _ieee80211_set_sband_iftype_data - set sband iftype data array
  * @sband: the sband to initialize
