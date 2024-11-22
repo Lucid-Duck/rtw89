@@ -3751,7 +3751,11 @@ static int rtw89_pci_request_irq(struct rtw89_dev *rtwdev,
 	unsigned long flags = 0;
 	int ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
 	flags |= PCI_IRQ_INTX | PCI_IRQ_MSI;
+#else
+	flags |= PCI_IRQ_LEGACY | PCI_IRQ_MSI;
+#endif
 	ret = pci_alloc_irq_vectors(pdev, 1, 1, flags);
 	if (ret < 0) {
 		rtw89_err(rtwdev, "failed to alloc irq vectors, ret %d\n", ret);
