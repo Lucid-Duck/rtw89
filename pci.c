@@ -339,7 +339,7 @@ static u32 rtw89_pci_rxbd_deliver_skbs(struct rtw89_dev *rtwdev,
 
 	ret = rtw89_pci_sync_skb_for_device_and_validate_rx_info(rtwdev, rx_ring, skb);
 	if (ret) {
-#ifdef DONT_SUPRESS_ERROR_MESSAGES
+#ifdef DONT_SUPPRESS_ERROR_MESSAGES
 		rtw89_err(rtwdev, "failed to update %d RXBD info: %d\n",
 			  bd_ring->wp, ret);
 #endif
@@ -635,7 +635,7 @@ static u32 rtw89_pci_release_tx_skbs(struct rtw89_dev *rtwdev,
 
 	ret = rtw89_pci_sync_skb_for_device_and_validate_rx_info(rtwdev, rx_ring, skb);
 	if (ret) {
-#ifdef DONT_SUPRESS_ERROR_MESSAGES
+#ifdef DONT_SUPPRESS_ERROR_MESSAGES
 		rtw89_err(rtwdev, "failed to update %d RXBD info: %d\n",
 			  bd_ring->wp, ret);
 #endif
@@ -3770,11 +3770,7 @@ static int rtw89_pci_request_irq(struct rtw89_dev *rtwdev,
 	unsigned long flags = 0;
 	int ret;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
 	flags |= PCI_IRQ_INTX | PCI_IRQ_MSI;
-#else
-	flags |= PCI_IRQ_LEGACY | PCI_IRQ_MSI;
-#endif
 	ret = pci_alloc_irq_vectors(pdev, 1, 1, flags);
 	if (ret < 0) {
 		rtw89_err(rtwdev, "failed to alloc irq vectors, ret %d\n", ret);
