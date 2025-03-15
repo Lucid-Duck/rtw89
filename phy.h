@@ -928,12 +928,14 @@ static inline s8 rtw89_phy_txpwr_rf_to_mac(struct rtw89_dev *rtwdev, s8 txpwr_rf
 	return txpwr_rf >> (chip->txpwr_factor_rf - chip->txpwr_factor_mac);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 static inline s8 rtw89_phy_txpwr_dbm_to_mac(struct rtw89_dev *rtwdev, s8 dbm)
 {
 	const struct rtw89_chip_info *chip = rtwdev->chip;
 
 	return clamp_t(s16, dbm << chip->txpwr_factor_mac, -64, 63);
 }
+#endif
 
 void rtw89_phy_ra_assoc(struct rtw89_dev *rtwdev, struct rtw89_sta_link *rtwsta_link);
 void rtw89_phy_ra_update(struct rtw89_dev *rtwdev);
