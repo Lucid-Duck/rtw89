@@ -792,6 +792,7 @@ exit:
 	wiphy_unlock(wiphy);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 /* Maximum Transmit Power field (@raw) can be EIRP or PSD.
  * Both units are 0.5 dB-based. Return a constraint in dB.
  */
@@ -947,6 +948,7 @@ bottom:
 	*changed += __rtw89_reg_6ghz_tpe_recalc(rtwdev);
 	return 0;
 }
+#endif
 
 static bool __rtw89_reg_6ghz_power_recalc(struct rtw89_dev *rtwdev)
 {
@@ -1049,9 +1051,11 @@ int rtw89_reg_6ghz_recalc(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwvi
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 	ret = rtw89_reg_6ghz_tpe_recalc(rtwdev, rtwvif_link, active, &changed);
 	if (ret)
 		return ret;
+#endif
 
 	if (changed)
 		rtw89_core_set_chip_txpwr(rtwdev);
