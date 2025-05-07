@@ -390,9 +390,15 @@ static int rtw89_usb_ops_tx_write(struct rtw89_dev *rtwdev,
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 static void rtw89_usb_rx_handler(struct work_struct *work)
 {
 	struct rtw89_usb *rtwusb = container_of(work, struct rtw89_usb, rx_work);
+#else
+static void rtw89_usb_rx_handler(unsigned long shut_up_gcc)
+{
+	struct rtw89_usb *rtwusb = (struct rtw89_usb *)shut_up_gcc;
+#endif
 	struct rtw89_dev *rtwdev = rtwusb->rtwdev;
 	struct rtw89_rx_desc_info desc_info;
 	struct sk_buff *rx_skb;
@@ -519,7 +525,11 @@ static void rtw89_usb_read_port_complete(struct urb *urb)
 		} else {
 			skb_put(skb, urb->actual_length);
 			skb_queue_tail(&rtwusb->rx_queue, skb);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 			queue_work(rtwusb->rxwq, &rtwusb->rx_work);
+#else
+			tasklet_schedule(&rtwusb->rx_tasklet);
+#endif
 		}
 
 		rtw89_usb_rx_resubmit(rtwusb, rxcb, GFP_ATOMIC);
@@ -603,7 +613,14 @@ static int rtw89_usb_init_rx(struct rtw89_dev *rtwdev)
 	struct sk_buff *rx_skb;
 	int i;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 	rtwusb->rxwq = alloc_workqueue("rtw89_usb: rx wq", WQ_BH, 0);
+#else
+	tasklet_init(&rtwusb->rx_tasklet, rtw89_usb_rx_handler,
+		     (unsigned long)rtwusb);
+
+	rtwusb->rxwq = create_singlethread_workqueue("rtw89_usb: rx wq");
+#endif
 	if (!rtwusb->rxwq) {
 		rtw89_err(rtwdev, "failed to create RX work queue\n");
 		return -ENOMEM;
@@ -612,7 +629,9 @@ static int rtw89_usb_init_rx(struct rtw89_dev *rtwdev)
 	skb_queue_head_init(&rtwusb->rx_queue);
 	skb_queue_head_init(&rtwusb->rx_free_queue);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 	INIT_WORK(&rtwusb->rx_work, rtw89_usb_rx_handler);
+#endif
 	INIT_WORK(&rtwusb->rx_urb_work, rtw89_usb_rx_resubmit_work);
 
 	for (i = 0; i < RTW89_USB_RX_SKB_NUM; i++) {

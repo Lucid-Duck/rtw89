@@ -42,6 +42,9 @@ struct rtw89_usb {
 	u8 out_pipe[RTW89_MAX_BULKOUT_NUM];
 
 	struct workqueue_struct *rxwq;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
+	struct tasklet_struct rx_tasklet; // Can't use BH workqueue
+#endif
 	struct rtw89_usb_rx_ctrl_block rx_cb[RTW89_USB_RXCB_NUM];
 	struct sk_buff_head rx_queue;
 	struct sk_buff_head rx_free_queue;
