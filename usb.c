@@ -18,6 +18,9 @@ static void rtw89_usb_vendorreq(struct rtw89_dev *rtwdev, u32 addr,
 	u16 value, index;
 	int attempt, ret;
 
+	if (test_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags))
+		return;
+
 	value = addr & 0x0000ffff;
 	index = (addr & 0x00ff0000) >> 16;
 
