@@ -3699,7 +3699,12 @@ select:
 		if (unlikely(!link_conf))
 			continue;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0) 
 		channel = link_conf->chanreq.oper.chan;
+#else
+		channel = link_conf->chandef.chan;
+#endif
+		
 		if (unlikely(!channel))
 			continue;
 
