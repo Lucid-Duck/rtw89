@@ -93,7 +93,7 @@ rtw89_usb_git-y := usb.o
 
 
 ccflags-y += -Wno-compare-distinct-pointer-types
-ccflags-y += -DDONT_SUPPRESS_ERROR_MESSAGES
+ccflags-y += -DCONFIG_RTW89_DEBUGMSG -DCONFIG_RTW89_DEBUGFS
 
 else
 
