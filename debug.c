@@ -4295,7 +4295,11 @@ rtw89_debug_priv_mlo_mode_get(struct rtw89_dev *rtwdev,
 	int count = 0;
 
 	p += scnprintf(p, end - p, "MLD(s) status: (MLO DM: %s)\n",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 		       str_disable_enable(mlo_dm_dis));
+#else
+		       str_enable_disable(!mlo_dm_dis));
+#endif
 
 	rtw89_for_each_rtwvif(rtwdev, rtwvif) {
 		vif = rtwvif_to_vif(rtwvif);
@@ -4396,8 +4400,6 @@ static const struct rtw89_debugfs rtw89_debugfs_templ = {
 	.btc_info = rtw89_debug_priv_get(btc_info, RSIZE_12K),
 	.btc_manual = rtw89_debug_priv_set(btc_manual),
 	.phy_info = rtw89_debug_priv_get(phy_info),
-	.disable_dm = rtw89_debug_priv_set_and_get(disable_dm, RWLOCK),
-	.mlo_mode = rtw89_debug_priv_set_and_get(mlo_mode, RWLOCK),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
 	.txpwr_table = rtw89_debug_priv_get(txpwr_table, RSIZE_20K, RLOCK),
 	.mac_mem_dump = rtw89_debug_priv_select_and_get(mac_mem_dump, RSIZE_16K, RLOCK),
@@ -4405,6 +4407,8 @@ static const struct rtw89_debugfs rtw89_debugfs_templ = {
 	.fw_crash = rtw89_debug_priv_set_and_get(fw_crash, WLOCK),
 	.fw_log_manual = rtw89_debug_priv_set(fw_log_manual, WLOCK),
 	.stations = rtw89_debug_priv_get(stations, RLOCK),
+	.disable_dm = rtw89_debug_priv_set_and_get(disable_dm, RWLOCK),
+	.mlo_mode = rtw89_debug_priv_set_and_get(mlo_mode, RWLOCK),
 #else
 	.txpwr_table = rtw89_debug_priv_get(txpwr_table, RSIZE_20K),
 	.mac_mem_dump = rtw89_debug_priv_select_and_get(mac_mem_dump, RSIZE_16K),
@@ -4412,6 +4416,8 @@ static const struct rtw89_debugfs rtw89_debugfs_templ = {
  	.fw_crash = rtw89_debug_priv_set_and_get(fw_crash),
 	.fw_log_manual = rtw89_debug_priv_set(fw_log_manual),
 	.stations = rtw89_debug_priv_get(stations),
+	.disable_dm = rtw89_debug_priv_set_and_get(disable_dm),
+	.mlo_mode = rtw89_debug_priv_set_and_get(mlo_mode),
 #endif
 };
 
