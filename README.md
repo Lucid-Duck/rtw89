@@ -17,7 +17,7 @@ git, make, gcc, kernel-headers, dkms and mokutil (dkms and mokutil are optional.
 1. Create a clone of this repo in your local machine
 
    ```
-   git clone https://github.com/a5a5aa555oo/rtw89
+   git clone https://github.com/morrownr/rtw89
    ```
 
 2. Change the working directory to rtw89
@@ -82,9 +82,6 @@ sudo dkms status
 sudo dkms remove rtw89/6.15 --all
 ```
 ```
-sudo rm -rf /var/lib/dkms/rtw89
-```
-```
 sudo rm -rf /usr/src/rtw89-6.15
 ```
 
@@ -103,9 +100,7 @@ sudo rm -f /etc/modprobe.d/rtw89.conf
 
 ## Note
 
-Kernel 6.6 ~ 6.14 are supported. For kernel 5.15 ~ 6.5 users, use the rtw89 driver in [6.6-lts branch](https://github.com/a5a5aa555oo/rtw89/tree/6.6-lts) instead.
-
-Tested with RTL8852BE on Arch Linux (kernel version: 6.6.90-1-lts66 / 6.12.28-1-lts) and it works.
+Kernel 6.6 ~ 6.15 are supported.
 
 ## Q&A
 
@@ -122,9 +117,6 @@ Tested with RTL8852BE on Arch Linux (kernel version: 6.6.90-1-lts66 / 6.12.28-1-
    2. Remove the rtw89 driver. (Change the driver version accordingly)
       ```
       sudo dkms remove rtw89/6.15 --all
-      ```
-      ```
-      sudo rm -rf /var/lib/dkms/rtw89/
       ```
       ```
       sudo rm -rf /usr/src/rtw89-6.15/
