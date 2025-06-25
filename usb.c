@@ -460,10 +460,12 @@ static void rtw89_usb_rx_handler(unsigned long shut_up_gcc)
 			skb_queue_tail(&rtwusb->rx_free_queue, rx_skb);
 	}
 
-	if (limit == 200)
+	if (limit == 200) {
 		rtw89_debug(rtwdev, RTW89_DBG_HCI,
 			    "left %d rx skbs in the queue for later\n",
 			    skb_queue_len(&rtwusb->rx_queue));
+		queue_work(rtwusb->rxwq, &rtwusb->rx_work);
+	}
 }
 
 static void rtw89_usb_rx_resubmit(struct rtw89_usb *rtwusb,
