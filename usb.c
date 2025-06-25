@@ -12,7 +12,7 @@
 static void rtw89_usb_vendorreq(struct rtw89_dev *rtwdev, u32 addr,
 				void *data, u16 len, u8 reqtype)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct usb_device *udev = rtwusb->udev;
 	unsigned int pipe;
 	u16 value, index;
@@ -205,7 +205,7 @@ static int rtw89_usb_write_port(struct rtw89_dev *rtwdev, u8 ch_dma,
 				void *data, int len, usb_complete_t cb,
 				void *context)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct usb_device *usbd = rtwusb->udev;
 	struct urb *urb;
 	u8 bulkout_id = rtw89_usb_get_bulkout_id(ch_dma);
@@ -537,7 +537,7 @@ static void rtw89_usb_read_port_complete(struct urb *urb)
 {
 	struct rtw89_usb_rx_ctrl_block *rxcb = urb->context;
 	struct rtw89_dev *rtwdev = rxcb->rtwdev;
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct sk_buff *skb = rxcb->rx_skb;
 
 	if (urb->status == 0) {
@@ -633,7 +633,7 @@ static int rtw89_usb_alloc_rx_bufs(struct rtw89_usb *rtwusb)
 
 static int rtw89_usb_init_rx(struct rtw89_dev *rtwdev)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct sk_buff *rx_skb;
 	int i;
 
@@ -669,7 +669,7 @@ static int rtw89_usb_init_rx(struct rtw89_dev *rtwdev)
 
 static void rtw89_usb_deinit_rx(struct rtw89_dev *rtwdev)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 
 	skb_queue_purge(&rtwusb->rx_queue);
 
@@ -680,7 +680,7 @@ static void rtw89_usb_deinit_rx(struct rtw89_dev *rtwdev)
 
 static void rtw89_usb_start_rx(struct rtw89_dev *rtwdev)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	int i;
 
 	for (i = 0; i < RTW89_USB_RXCB_NUM; i++)
@@ -745,7 +745,7 @@ static int rtw89_usb_ops_mac_pre_deinit(struct rtw89_dev *rtwdev)
 
 static int rtw89_usb_ops_mac_post_init(struct rtw89_dev *rtwdev)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	enum usb_device_speed speed;
 	u32 ep;
 
@@ -826,7 +826,7 @@ static const
 struct rtw89_dle_mem *rtw89_usb_ops_dle_mem(struct rtw89_dev *rtwdev,
 					    u8 qta_mode)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 
 	if (rtwusb->udev->speed == USB_SPEED_SUPER)
 		return &rtwdev->chip->dle_mem_usb3[qta_mode];
@@ -884,7 +884,7 @@ static int rtw89_usb_parse(struct rtw89_dev *rtwdev,
 {
 	struct usb_host_interface *host_interface = &intf->altsetting[0];
 	struct usb_interface_descriptor *intf_desc = &host_interface->desc;
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct usb_endpoint_descriptor *endpoint;
 	int num_out_pipes = 0;
 	u8 num;
@@ -935,7 +935,7 @@ static int rtw89_usb_parse(struct rtw89_dev *rtwdev,
 static int rtw89_usb_intf_init(struct rtw89_dev *rtwdev,
 			       struct usb_interface *intf)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	int ret;
 
 	ret = rtw89_usb_parse(rtwdev, intf);
@@ -960,7 +960,7 @@ static int rtw89_usb_intf_init(struct rtw89_dev *rtwdev,
 static void rtw89_usb_intf_deinit(struct rtw89_dev *rtwdev,
 				  struct usb_interface *intf)
 {
-	struct rtw89_usb *rtwusb = rtw89_get_usb_priv(rtwdev);
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 
 	mutex_destroy(&rtwusb->vendor_req_mutex);
 	usb_put_dev(rtwusb->udev);
@@ -986,7 +986,7 @@ int rtw89_usb_probe(struct usb_interface *intf,
 		return -ENOMEM;
 	}
 
-	rtwusb = rtw89_get_usb_priv(rtwdev);
+	rtwusb = rtw89_usb_priv(rtwdev);
 	rtwusb->rtwdev = rtwdev;
 
 	rtwdev->hci.ops = &rtw89_usb_ops;
@@ -1055,7 +1055,7 @@ void rtw89_usb_disconnect(struct usb_interface *intf)
 		return;
 
 	rtwdev = hw->priv;
-	rtwusb = rtw89_get_usb_priv(rtwdev);
+	rtwusb = rtw89_usb_priv(rtwdev);
 
 	rtw89_usb_cancel_rx_bufs(rtwusb);
 
