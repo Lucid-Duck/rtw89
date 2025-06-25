@@ -472,7 +472,7 @@ static void rtw89_usb_rx_resubmit(struct rtw89_usb *rtwusb,
 {
 	struct rtw89_dev *rtwdev = rtwusb->rtwdev;
 	struct sk_buff *rx_skb;
-	int error;
+	int ret;
 
 	rx_skb = skb_dequeue(&rtwusb->rx_free_queue);
 	if (!rx_skb)
@@ -491,17 +491,16 @@ static void rtw89_usb_rx_resubmit(struct rtw89_usb *rtwusb,
 			  rxcb->rx_skb->data, RTW89_USB_RECVBUF_SZ,
 			  rtw89_usb_read_port_complete, rxcb);
 
-	error = usb_submit_urb(rxcb->rx_urb, gfp);
-	if (error) {
+	ret = usb_submit_urb(rxcb->rx_urb, gfp);
+	if (ret) {
 		skb_queue_tail(&rtwusb->rx_free_queue, rxcb->rx_skb);
 
-		if (error == -ENODEV)
+		if (ret == -ENODEV)
 			set_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags);
 		else
-			rtw89_err(rtwdev, "Err sending rx data urb %d\n",
-				  error);
+			rtw89_err(rtwdev, "Err sending rx data urb %d\n", ret);
 
-		if (error == -ENOMEM)
+		if (ret == -ENOMEM)
 			goto try_later;
 	}
 
