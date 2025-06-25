@@ -5,6 +5,8 @@
 #ifndef __RTW89_USB_H__
 #define __RTW89_USB_H__
 
+#include "txrx.h"
+
 #define RTW89_USB_VENQT			0x05
 #define RTW89_USB_VENQT_READ		0xc0
 #define RTW89_USB_VENQT_WRITE		0x40
@@ -26,6 +28,7 @@ struct rtw89_usb_rx_ctrl_block {
 
 struct rtw89_usb_tx_ctrl_block {
 	struct rtw89_dev *rtwdev;
+	u8 txch;
 	struct sk_buff_head tx_ack_queue;
 };
 
@@ -49,6 +52,8 @@ struct rtw89_usb {
 	struct sk_buff_head rx_free_queue;
 	struct work_struct rx_work;
 	struct work_struct rx_urb_work;
+
+	struct sk_buff_head tx_queue[RTW89_TXCH_NUM];
 };
 
 static inline struct rtw89_usb *rtw89_usb_priv(struct rtw89_dev *rtwdev)

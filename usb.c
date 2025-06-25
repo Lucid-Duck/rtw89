@@ -167,13 +167,6 @@ rtw89_usb_ops_check_and_reclaim_tx_resource(struct rtw89_dev *rtwdev,
 	return 42; /* TODO some kind of calculation? */
 }
 
-static void rtw89_usb_ops_tx_kick_off(struct rtw89_dev *rtwdev, u8 txch)
-{
-	/* TODO later. for now transmit every frame right away in
-	 * rtw89_usb_ops_tx_write
-	 */
-}
-
 static u8 rtw89_usb_get_bulkout_id(u8 ch_dma)
 {
 	switch (ch_dma) {
@@ -195,133 +188,32 @@ static u8 rtw89_usb_get_bulkout_id(u8 ch_dma)
 	}
 }
 
-static int rtw89_usb_write_port(struct rtw89_dev *rtwdev, u8 ch_dma,
-				void *data, int len, usb_complete_t cb,
-				void *context)
-{
-	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
-	struct usb_device *usbd = rtwusb->udev;
-	struct urb *urb;
-	u8 bulkout_id = rtw89_usb_get_bulkout_id(ch_dma);
-	unsigned int pipe;
-	int ret;
-
-	if (test_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags))
-		return 0;
-
-	urb = usb_alloc_urb(0, GFP_ATOMIC);
-	if (!urb)
-		return -ENOMEM;
-
-	pipe = usb_sndbulkpipe(usbd, rtwusb->out_pipe[bulkout_id]);
-
-	usb_fill_bulk_urb(urb, usbd, pipe, data, len, cb, context);
-	urb->transfer_flags |= URB_ZERO_PACKET;
-	ret = usb_submit_urb(urb, GFP_ATOMIC);
-
-	if (ret)
-		usb_free_urb(urb);
-
-	if (ret == -ENODEV)
-		set_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags);
-
-	return ret;
-}
-
-static void rtw89_usb_write_port_complete_fwcmd(struct urb *urb)
-{
-	struct rtw89_usb_tx_ctrl_block *txcb = urb->context;
-	struct rtw89_dev *rtwdev = txcb->rtwdev;
-
-	switch (urb->status) {
-	case 0:
-	case -EPIPE:
-	case -EPROTO:
-	case -EINPROGRESS:
-	case -ENOENT:
-	case -ECONNRESET:
-		break;
-	default:
-		set_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags);
-		break;
-	}
-
-	skb_queue_purge(&txcb->tx_ack_queue);
-	kfree(txcb);
-	usb_free_urb(urb);
-}
-
-static int rtw89_usb_fwcmd_submit(struct rtw89_dev *rtwdev,
-				  struct rtw89_core_tx_request *tx_req)
-{
-	struct rtw89_tx_desc_info *desc_info = &tx_req->desc_info;
-	struct rtw89_usb_tx_ctrl_block *txcb;
-	struct sk_buff *skb = tx_req->skb;
-	struct sk_buff *skb512;
-	int txdesc_size = rtwdev->chip->h2c_desc_size;
-	void *txdesc;
-	int ret;
-
-	if (((desc_info->pkt_size + txdesc_size) % 512) == 0) {
-		rtw89_info(rtwdev, "avoiding multiple of 512\n");
-
-		skb512 = dev_alloc_skb(txdesc_size + desc_info->pkt_size +
-				       RTW89_USB_MOD512_PADDING);
-		if (!skb512) {
-			rtw89_err(rtwdev, "%s: failed to allocate skb\n",
-				  __func__);
-
-			return -ENOMEM;
-		}
-
-		skb_pull(skb512, txdesc_size);
-		skb_put_data(skb512, skb->data, skb->len);
-		skb_put_zero(skb512, RTW89_USB_MOD512_PADDING);
-
-		dev_kfree_skb_any(skb);
-		skb = skb512;
-		tx_req->skb = skb512;
-
-		desc_info->pkt_size += RTW89_USB_MOD512_PADDING;
-	}
-
-	txcb = kmalloc(sizeof(*txcb), GFP_ATOMIC);
-	if (!txcb)
-		return -ENOMEM;
-
-	txdesc = skb_push(skb, txdesc_size);
-	memset(txdesc, 0, txdesc_size);
-	rtw89_chip_fill_txdesc_fwcmd(rtwdev, desc_info, txdesc);
-
-	txcb->rtwdev = rtwdev;
-	skb_queue_head_init(&txcb->tx_ack_queue);
-
-	skb_queue_tail(&txcb->tx_ack_queue, skb);
-
-	ret = rtw89_usb_write_port(rtwdev, RTW89_DMA_H2C, skb->data, skb->len,
-				   rtw89_usb_write_port_complete_fwcmd, txcb);
-
-	if (ret) {
-		rtw89_err(rtwdev, "%s failed: %d\n", __func__, ret);
-
-		skb_dequeue(&txcb->tx_ack_queue);
-		kfree(txcb);
-	}
-
-	return ret;
-}
-
 static void rtw89_usb_write_port_complete(struct urb *urb)
 {
 	struct rtw89_usb_tx_ctrl_block *txcb = urb->context;
 	struct rtw89_dev *rtwdev = txcb->rtwdev;
 	struct ieee80211_tx_info *info;
+	struct rtw89_txwd_body *txdesc;
 	struct sk_buff *skb;
+	u32 txdesc_size;
 
 	while (true) {
 		skb = skb_dequeue(&txcb->tx_ack_queue);
 		if (!skb)
 			break;
+
+		if (txcb->txch == RTW89_TXCH_CH12) {
+			dev_kfree_skb_any(skb);
+			continue;
+		}
+
+		txdesc = (struct rtw89_txwd_body *)skb->data;
+
+		txdesc_size = rtwdev->chip->txwd_body_size;
+		if (u32_get_bits(txdesc->dword0, RTW89_TXWD_BODY0_WD_INFO_EN))
+			txdesc_size += rtwdev->chip->txwd_info_size;
+
+		skb_pull(skb, txdesc_size);
 
 		info = IEEE80211_SKB_CB(skb);
 		ieee80211_tx_info_clear_status(info);
@@ -353,16 +245,126 @@ static void rtw89_usb_write_port_complete(struct urb *urb)
 	usb_free_urb(urb);
 }
 
+static int rtw89_usb_write_port(struct rtw89_dev *rtwdev, u8 ch_dma,
+				void *data, int len, void *context)
+{
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	struct usb_device *usbd = rtwusb->udev;
+	struct urb *urb;
+	u8 bulkout_id = rtw89_usb_get_bulkout_id(ch_dma);
+	unsigned int pipe;
+	int ret;
+
+	if (test_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags))
+		return 0;
+
+	urb = usb_alloc_urb(0, GFP_ATOMIC);
+	if (!urb)
+		return -ENOMEM;
+
+	pipe = usb_sndbulkpipe(usbd, rtwusb->out_pipe[bulkout_id]);
+
+	usb_fill_bulk_urb(urb, usbd, pipe, data, len,
+			  rtw89_usb_write_port_complete, context);
+	urb->transfer_flags |= URB_ZERO_PACKET;
+	ret = usb_submit_urb(urb, GFP_ATOMIC);
+
+	if (ret)
+		usb_free_urb(urb);
+
+	if (ret == -ENODEV)
+		set_bit(RTW89_FLAG_UNPLUGGED, rtwdev->flags);
+
+	return ret;
+}
+
+static void rtw89_usb_ops_tx_kick_off(struct rtw89_dev *rtwdev, u8 txch)
+{
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	struct rtw89_usb_tx_ctrl_block *txcb;
+	struct sk_buff *skb;
+	int ret;
+
+	while (true) {
+		skb = skb_dequeue(&rtwusb->tx_queue[txch]);
+		if (!skb)
+			break;
+
+		txcb = kmalloc(sizeof(*txcb), GFP_ATOMIC);
+		if (!txcb) {
+			dev_kfree_skb_any(skb);
+			continue;
+		}
+
+		txcb->rtwdev = rtwdev;
+		txcb->txch = txch;
+		skb_queue_head_init(&txcb->tx_ack_queue);
+
+		skb_queue_tail(&txcb->tx_ack_queue, skb);
+
+		ret = rtw89_usb_write_port(rtwdev, txch, skb->data, skb->len,
+					   txcb);
+		if (ret) {
+			rtw89_err(rtwdev, "write port txch %d failed: %d\n",
+				  txch, ret);
+
+			skb_dequeue(&txcb->tx_ack_queue);
+			kfree(txcb);
+			dev_kfree_skb_any(skb);
+		}
+	}
+}
+
+static int rtw89_usb_tx_write_fwcmd(struct rtw89_dev *rtwdev,
+				    struct rtw89_core_tx_request *tx_req)
+{
+	struct rtw89_tx_desc_info *desc_info = &tx_req->desc_info;
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	struct sk_buff *skb = tx_req->skb;
+	struct sk_buff *skb512;
+	u32 txdesc_size = rtwdev->chip->h2c_desc_size;
+	void *txdesc;
+
+	if (((desc_info->pkt_size + txdesc_size) % 512) == 0) {
+		rtw89_debug(rtwdev, RTW89_DBG_HCI, "avoiding multiple of 512\n");
+
+		skb512 = dev_alloc_skb(txdesc_size + desc_info->pkt_size +
+				       RTW89_USB_MOD512_PADDING);
+		if (!skb512) {
+			rtw89_err(rtwdev, "%s: failed to allocate skb\n",
+				  __func__);
+
+			return -ENOMEM;
+		}
+
+		skb_pull(skb512, txdesc_size);
+		skb_put_data(skb512, skb->data, skb->len);
+		skb_put_zero(skb512, RTW89_USB_MOD512_PADDING);
+
+		dev_kfree_skb_any(skb);
+		skb = skb512;
+		tx_req->skb = skb512;
+
+		desc_info->pkt_size += RTW89_USB_MOD512_PADDING;
+	}
+
+	txdesc = skb_push(skb, txdesc_size);
+	memset(txdesc, 0, txdesc_size);
+	rtw89_chip_fill_txdesc_fwcmd(rtwdev, desc_info, txdesc);
+
+	skb_queue_tail(&rtwusb->tx_queue[desc_info->ch_dma], skb);
+
+	return 0;
+}
+
 static int rtw89_usb_ops_tx_write(struct rtw89_dev *rtwdev,
 				  struct rtw89_core_tx_request *tx_req)
 {
 	struct rtw89_tx_desc_info *desc_info = &tx_req->desc_info;
-	const struct rtw89_chip_info *chip = rtwdev->chip;
-	struct rtw89_usb_tx_ctrl_block *txcb;
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
 	struct sk_buff *skb = tx_req->skb;
 	struct rtw89_txwd_body *txdesc;
 	u32 txdesc_size;
-	int ret, len;
 
 	if ((desc_info->ch_dma == RTW89_TXCH_CH12 ||
 	     tx_req->tx_type == RTW89_CORE_TX_TYPE_FWCMD) &&
@@ -374,38 +376,21 @@ static int rtw89_usb_ops_tx_write(struct rtw89_dev *rtwdev,
 	}
 
 	if (desc_info->ch_dma == RTW89_TXCH_CH12)
-		return rtw89_usb_fwcmd_submit(rtwdev, tx_req);
+		return rtw89_usb_tx_write_fwcmd(rtwdev, tx_req);
 
-	txcb = kmalloc(sizeof(*txcb), GFP_ATOMIC);
-	if (!txcb)
-		return -ENOMEM;
-
-	txdesc_size = chip->txwd_body_size;
+	txdesc_size = rtwdev->chip->txwd_body_size;
 	if (desc_info->en_wd_info)
-		txdesc_size += chip->txwd_info_size;
+		txdesc_size += rtwdev->chip->txwd_info_size;
 
-	txdesc = (struct rtw89_txwd_body *)(skb->data - txdesc_size);
-	len = skb->len + txdesc_size;
+	txdesc = skb_push(skb, txdesc_size);
 	memset(txdesc, 0, txdesc_size);
 	rtw89_chip_fill_txdesc(rtwdev, desc_info, txdesc);
 
 	le32p_replace_bits(&txdesc->dword0, 1, RTW89_TXWD_BODY0_STF_MODE);
 
-	txcb->rtwdev = rtwdev;
-	skb_queue_head_init(&txcb->tx_ack_queue);
+	skb_queue_tail(&rtwusb->tx_queue[desc_info->ch_dma], skb);
 
-	skb_queue_tail(&txcb->tx_ack_queue, skb);
-
-	ret = rtw89_usb_write_port(rtwdev, desc_info->ch_dma, txdesc, len,
-				   rtw89_usb_write_port_complete, txcb);
-	if (ret) {
-		rtw89_err(rtwdev, "%s failed: %d\n", __func__, ret);
-
-		skb_dequeue(&txcb->tx_ack_queue);
-		kfree(txcb);
-	}
-
-	return ret;
+	return 0;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
@@ -676,6 +661,28 @@ static void rtw89_usb_start_rx(struct rtw89_dev *rtwdev)
 
 	for (i = 0; i < RTW89_USB_RXCB_NUM; i++)
 		rtw89_usb_rx_resubmit(rtwusb, &rtwusb->rx_cb[i], GFP_KERNEL);
+}
+
+static void rtw89_usb_init_tx(struct rtw89_dev *rtwdev)
+{
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(rtwusb->tx_queue); i++)
+		skb_queue_head_init(&rtwusb->tx_queue[i]);
+}
+
+static void rtw89_usb_deinit_tx(struct rtw89_dev *rtwdev)
+{
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(rtwusb->tx_queue); i++) {
+		if (i == RTW89_TXCH_CH12)
+			skb_queue_purge(&rtwusb->tx_queue[i]);
+		else
+			ieee80211_purge_tx_queue(rtwdev->hw, &rtwusb->tx_queue[i]);
+	}
 }
 
 static void rtw89_usb_ops_reset(struct rtw89_dev *rtwdev)
@@ -985,6 +992,8 @@ int rtw89_usb_probe(struct usb_interface *intf,
 		goto err_free_hw;
 	}
 
+	rtw89_usb_init_tx(rtwdev);
+
 	ret = rtw89_usb_alloc_rx_bufs(rtwusb);
 	if (ret)
 		goto err_intf_deinit;
@@ -1050,6 +1059,7 @@ void rtw89_usb_disconnect(struct usb_interface *intf)
 	rtw89_core_deinit(rtwdev);
 	rtw89_usb_deinit_rx(rtwdev);
 	rtw89_usb_free_rx_bufs(rtwusb);
+	rtw89_usb_deinit_tx(rtwdev);
 	rtw89_usb_intf_deinit(rtwdev, intf);
 	rtw89_free_ieee80211_hw(rtwdev);
 }
