@@ -53,7 +53,7 @@ struct rtw89_usb {
 	struct work_struct rx_urb_work;
 };
 
-static inline struct rtw89_usb *rtw89_get_usb_priv(struct rtw89_dev *rtwdev)
+static inline struct rtw89_usb *rtw89_usb_priv(struct rtw89_dev *rtwdev)
 {
 	return (struct rtw89_usb *)rtwdev->priv;
 }
