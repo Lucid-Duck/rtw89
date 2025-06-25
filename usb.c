@@ -83,7 +83,6 @@ static u32 rtw89_usb_read_cmac(struct rtw89_dev *rtwdev, u32 addr)
 				    RTW89_USB_VENQT_READ);
 
 		val32 = le32_to_cpu(data);
-
 		if (val32 != RTW89_R32_DEAD)
 			break;
 
@@ -796,11 +795,9 @@ static int rtw89_usb_ops_mac_lv1_rcvy(struct rtw89_dev *rtwdev,
 		rtw89_write32_set(rtwdev, reg, mask);
 
 		msleep(30);
-
 		break;
 	case RTW89_LV1_RCVY_STEP_2:
 		rtw89_write32_clr(rtwdev, reg, mask);
-
 		break;
 	default:
 		return -EINVAL;
