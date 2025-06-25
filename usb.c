@@ -9,6 +9,8 @@
 #include "txrx.h"
 #include "usb.h"
 
+static void rtw89_usb_read_port_complete(struct urb *urb);
+
 static void rtw89_usb_vendorreq(struct rtw89_dev *rtwdev, u32 addr,
 				void *data, u16 len, u8 reqtype)
 {
@@ -463,8 +465,6 @@ static void rtw89_usb_rx_handler(unsigned long shut_up_gcc)
 			    "left %d rx skbs in the queue for later\n",
 			    skb_queue_len(&rtwusb->rx_queue));
 }
-
-static void rtw89_usb_read_port_complete(struct urb *urb);
 
 static void rtw89_usb_rx_resubmit(struct rtw89_usb *rtwusb,
 				  struct rtw89_usb_rx_ctrl_block *rxcb,
