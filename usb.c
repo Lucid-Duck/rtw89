@@ -598,8 +598,6 @@ static void rtw89_usb_free_rx_bufs(struct rtw89_usb *rtwusb)
 
 	for (i = 0; i < RTW89_USB_RXCB_NUM; i++) {
 		rxcb = &rtwusb->rx_cb[i];
-
-		usb_kill_urb(rxcb->rx_urb);
 		usb_free_urb(rxcb->rx_urb);
 	}
 }
