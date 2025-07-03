@@ -745,20 +745,39 @@ static int rtw89_usb_ops_deinit(struct rtw89_dev *rtwdev)
 
 static int rtw89_usb_ops_mac_pre_init(struct rtw89_dev *rtwdev)
 {
+	u32 usb_host_request_2, usb_wlan0_1, hci_func_en;
 	u32 val32;
 
-	rtw89_write32_set(rtwdev, R_AX_USB_HOST_REQUEST_2, B_AX_R_USBIO_MODE);
+	switch (rtwdev->chip->chip_id) {
+	case RTL8851B:
+	case RTL8852A:
+	case RTL8852B:
+		usb_host_request_2 = R_AX_USB_HOST_REQUEST_2;
+		usb_wlan0_1 = R_AX_USB_WLAN0_1;
+		hci_func_en = R_AX_HCI_FUNC_EN;
+		break;
+	case RTL8852C:
+		usb_host_request_2 = R_AX_USB_HOST_REQUEST_2_V1;
+		usb_wlan0_1 = R_AX_USB_WLAN0_1_V1;
+		hci_func_en = R_AX_HCI_FUNC_EN_V1;
+		break;
+	default:
+		rtw89_err(rtwdev, "%s: unknown chip\n", __func__);
+		return -EOPNOTSUPP;
+	}
+
+	rtw89_write32_set(rtwdev, usb_host_request_2, B_AX_R_USBIO_MODE);
 
 	/* fix USB IO hang suggest by chihhanli@realtek.com */
-	rtw89_write32_clr(rtwdev, R_AX_USB_WLAN0_1,
+	rtw89_write32_clr(rtwdev, usb_wlan0_1,
 			  B_AX_USBRX_RST | B_AX_USBTX_RST);
 
-	val32 = rtw89_read32(rtwdev, R_AX_HCI_FUNC_EN);
+	val32 = rtw89_read32(rtwdev, hci_func_en);
 	val32 &= ~(B_AX_HCI_RXDMA_EN | B_AX_HCI_TXDMA_EN);
-	rtw89_write32(rtwdev, R_AX_HCI_FUNC_EN, val32);
+	rtw89_write32(rtwdev, hci_func_en, val32);
 
 	val32 |= B_AX_HCI_RXDMA_EN | B_AX_HCI_TXDMA_EN;
-	rtw89_write32(rtwdev, R_AX_HCI_FUNC_EN, val32);
+	rtw89_write32(rtwdev, hci_func_en, val32);
 	/* fix USB TRX hang suggest by chihhanli@realtek.com */
 
 	return 0;
@@ -772,10 +791,29 @@ static int rtw89_usb_ops_mac_pre_deinit(struct rtw89_dev *rtwdev)
 static int rtw89_usb_ops_mac_post_init(struct rtw89_dev *rtwdev)
 {
 	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	u32 usb3_mac_npi_config_intf_0, usb_endpoint_0, usb_endpoint_2;
 	enum usb_device_speed speed;
 	u32 ep;
 
-	rtw89_write32_clr(rtwdev, R_AX_USB3_MAC_NPI_CONFIG_INTF_0,
+	switch (rtwdev->chip->chip_id) {
+	case RTL8851B:
+	case RTL8852A:
+	case RTL8852B:
+		usb3_mac_npi_config_intf_0 = R_AX_USB3_MAC_NPI_CONFIG_INTF_0;
+		usb_endpoint_0 = R_AX_USB_ENDPOINT_0;
+		usb_endpoint_2 = R_AX_USB_ENDPOINT_2;
+		break;
+	case RTL8852C:
+		usb3_mac_npi_config_intf_0 = R_AX_USB3_MAC_NPI_CONFIG_INTF_0_V1;
+		usb_endpoint_0 = R_AX_USB_ENDPOINT_0_V1;
+		usb_endpoint_2 = R_AX_USB_ENDPOINT_2_V1;
+		break;
+	default:
+		rtw89_err(rtwdev, "%s: unknown chip\n", __func__);
+		return -EOPNOTSUPP;
+	}
+
+	rtw89_write32_clr(rtwdev, usb3_mac_npi_config_intf_0,
 			  B_AX_SSPHY_LFPS_FILTER);
 
 	speed = rtwusb->udev->speed;
@@ -791,9 +829,9 @@ static int rtw89_usb_ops_mac_post_init(struct rtw89_dev *rtwdev)
 		if (ep == 8)
 			continue;
 
-		rtw89_write8_mask(rtwdev, R_AX_USB_ENDPOINT_0,
+		rtw89_write8_mask(rtwdev, usb_endpoint_0,
 				  B_AX_EP_IDX, ep);
-		rtw89_write8(rtwdev, R_AX_USB_ENDPOINT_2 + 1, NUMP);
+		rtw89_write8(rtwdev, usb_endpoint_2 + 1, NUMP);
 	}
 
 	return 0;
