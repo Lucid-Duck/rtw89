@@ -94,9 +94,9 @@ rtw89_pci_git-y := pci.o pci_be.o
 obj-m += rtw89_usb_git.o
 rtw89_usb_git-y := usb.o
 
-
 ccflags-y += -Wno-compare-distinct-pointer-types
 ccflags-y += -DCONFIG_RTW89_DEBUGMSG -DCONFIG_RTW89_DEBUGFS
+ccflags-y += -DGIT_COMMIT=$(shell cd $(src) && git rev-parse HEAD)
 
 else
 

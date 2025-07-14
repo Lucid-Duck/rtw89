@@ -5414,6 +5414,8 @@ int rtw89_chip_info_setup(struct rtw89_dev *rtwdev)
 {
 	int ret;
 
+	rtw89_info(rtwdev, "git commit " __stringify(GIT_COMMIT) "\n");
+
 	rtw89_read_chip_ver(rtwdev);
 
 	ret = rtw89_mac_pwr_on(rtwdev);
