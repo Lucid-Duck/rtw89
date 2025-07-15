@@ -28,6 +28,17 @@ struct rtw89_regd_data;
 
 extern const struct ieee80211_ops rtw89_ops;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+static inline void ieee80211_purge_tx_queue(struct ieee80211_hw *hw,
+					    struct sk_buff_head *skbs)
+{
+	struct sk_buff *skb;
+
+	while ((skb = __skb_dequeue(skbs)))
+		ieee80211_free_txskb(hw, skb);
+}
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 /**
  * DIV_U64_ROUND_UP - unsigned 64bit divide with 32bit divisor rounded up
