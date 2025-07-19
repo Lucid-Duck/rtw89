@@ -3748,6 +3748,7 @@ fail:
 }
 EXPORT_SYMBOL(rtw89_fw_h2c_txtime_cmac_tbl_g7);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
 int rtw89_fw_h2c_punctured_cmac_tbl_g7(struct rtw89_dev *rtwdev,
 				       struct rtw89_vif_link *rtwvif_link,
 				       u16 punctured)
@@ -3790,6 +3791,7 @@ fail:
 	return ret;
 }
 EXPORT_SYMBOL(rtw89_fw_h2c_punctured_cmac_tbl_g7);
+#endif
 
 int rtw89_fw_h2c_txpath_cmac_tbl(struct rtw89_dev *rtwdev,
 				 struct rtw89_sta_link *rtwsta_link)
