@@ -4832,13 +4832,21 @@ void rtw89_core_csa_beacon_work(struct wiphy *wiphy, struct wiphy_work *work)
 
 	rcu_read_unlock();
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
+	if (!ieee80211_beacon_cntdwn_is_complete(vif)) {
+#else
 	if (!ieee80211_beacon_cntdwn_is_complete(vif, rtwvif_link->link_id)) {
+#endif
 		rtw89_chip_h2c_update_beacon(rtwdev, rtwvif_link);
 
 		wiphy_delayed_work_queue(wiphy, &rtwvif_link->csa_beacon_work,
 					 usecs_to_jiffies(delay));
 	} else {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0)
+		ieee80211_csa_finish(vif);
+#else
 		ieee80211_csa_finish(vif, rtwvif_link->link_id);
+#endif
 	}
 }
 
