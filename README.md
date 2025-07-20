@@ -42,16 +42,16 @@ git, make, gcc, kernel-headers, dkms and mokutil (dkms and mokutil are optional.
 
 3. Build and install the driver
 
-   * _via make_ (**The testers of the new drivers for the USB devices MUST install the driver in this way.**)
-
-     ```
-     make clean modules && sudo make install
-     ```
-
-   * _via dkms (Recommended if Secure Boot is enabled in your system)_
+   * _via dkms (Recommended especially if Secure Boot is enabled in your system)_
 
      ```
      sudo dkms install $PWD
+     ```
+
+   * _via make_ (**The testers of the new drivers for the USB devices MUST install the driver in this way please.**)
+
+     ```
+     make clean modules && sudo make install
      ```
 
 4. Install the firmware necessary for the driver
@@ -149,6 +149,18 @@ sudo rm -f /etc/modprobe.d/rtw89.conf
    2. Rebuild and reinstall the driver from the latest code
       ```
       make clean modules && sudo make install
+      ```
+
+### Q4. How to update the firmware in my system?
+
+   1. Run this command in the rtw89 source directory to pull the latest code and firmware
+      ```
+      git pull
+      ```
+
+   2. Update the firmware files in your system
+      ```
+      sudo make install_fw
       ```
 
 ## The Main Menu for this site contains a lot of information regarding USB WiFi Adapters
