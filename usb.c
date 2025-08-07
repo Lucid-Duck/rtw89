@@ -770,6 +770,8 @@ static int rtw89_usb_ops_mac_pre_init(struct rtw89_dev *rtwdev)
 		usb_wlan0_1 = R_AX_USB_WLAN0_1_V1;
 		hci_func_en = R_AX_HCI_FUNC_EN_V1;
 		break;
+	case RTL8922A:
+		return 0; /* Nothing to do? */
 	default:
 		rtw89_err(rtwdev, "%s: unknown chip\n", __func__);
 		return -EOPNOTSUPP;
