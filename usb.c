@@ -867,6 +867,8 @@ static int rtw89_usb_ops_mac_lv1_rcvy(struct rtw89_dev *rtwdev,
 		reg = R_AX_USB_WLAN0_1_V1;
 		mask = B_AX_USBRX_RST_V1 | B_AX_USBTX_RST_V1;
 		break;
+	case RTL8922A:
+		return 0; /* TODO ? */
 	default:
 		rtw89_err(rtwdev, "%s: fix me\n", __func__);
 		return -EOPNOTSUPP;
